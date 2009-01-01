@@ -1,7 +1,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 -- |
 -- Module: Language.KURE.Boilerplate 
--- Copyright: (c) 2008 Andy Gill
+-- Copyright: (c) 2009 Andy Gill
 -- License: BSD3
 --
 -- Maintainer: Andy Gill <andygill@ku.edu>
@@ -31,8 +31,13 @@
 --
 --  * @withFoo :: (...,Failable) => (A -> B -> f a) -> C -> f a --@ application and pattern matching on @Foo@.
 -- 
-
 -- Here, R is short for a 'Rewrite m dec', and 'T is short for 'Translate m dec'.
+--
+-- An example of use is
+--
+-- > $(kureYourBoilerplate ''MyGeneric ''Id ''())
+--
+-- Which means @MyGeneric@ is my universal type, @Id@ is my monad, and @()@ is my monoid.
 
 module Language.KURE.Boilerplate 
 	( kureYourBoilerplate
@@ -41,10 +46,13 @@ module Language.KURE.Boilerplate
  where
         
 import Language.KURE
+
 import Language.Haskell.TH
+
 import Data.Char
 import Data.Monoid
 import Control.Monad
+import System.Environment
 
 -- | 'kureYourBoilerplate' generates a number of functions for each data-type mentioned in
 -- our given Generic data-type, which we need to provide for KURE, as well as the
@@ -58,10 +66,11 @@ import Control.Monad
 
 -- The second argument is the monad over which you will be parameterizing your rewrite rules,
 -- and the third argument is the monoid over which you will be parameterizing.
-
+--
 kureYourBoilerplate :: Name -> Name -> Name -> Q [Dec]
 kureYourBoilerplate gname m dec = do
-  debug <- return True
+  debug <- runIO $ (do _k_debug <- getEnv "KURE_DEBUG"
+		       return $ True) `catch` (\ _ -> return False)
   info <- reify gname
   tys <- case info of
             TyConI (DataD _ _ _ cons _) -> do
@@ -73,9 +82,7 @@ kureYourBoilerplate gname m dec = do
             TyConI (TySynD _ [] singleTy) -> 
                 return [singleTy]
             _ -> fail $ "problem with generic type name " ++ show gname
-  runIO $ putStrLn $ pprint tys
   let tyNames = map pprint tys
-  runIO $ putStrLn $ show tyNames
   decs <- sequence [ kureType debug (ConT m,ConT dec) tyNames ty | ty <- tys ]
   when debug $ runIO $ do putStrLn $ pprint (concat decs)
   return $ concat decs
@@ -106,10 +113,10 @@ kureType debug (m,dec) tyNames ty@(ConT nm) = do
                         
 
   return $ concat decs ++ [theInstance] 
-kureType debug _ tyNames ty = fail $ "kureType: unsupported type :: " ++ show ty        
+kureType _debug _ _tyNames ty = fail $ "kureType: unsupported type :: " ++ show ty        
 
 kureCons :: Bool -> [String] -> Con -> Q ([Dec],String,Int)
-kureCons debug tyNames (NormalC consName args)  = do 
+kureCons _debug tyNames (NormalC consName args)  = do 
 
         let guardName = mkName (combName consName ++ "G")
         v <- newName "v"
@@ -211,8 +218,6 @@ kureCons debug tyNames (NormalC consName args)  = do
    where
         argsTypes = map snd args
 kureCons _ _tyNames other  = error $ "Unsupported constructor : " ++ show other
-
-data X = X
 
 combName :: Name -> String
 combName nm = case nameBase nm of

@@ -11,17 +11,10 @@ import Debug.Trace
 import Exp
 import Id
 
--- data MyGeneric = ExpG Exp
-type MyGeneric = Exp
+data MyGeneric = ExpG Exp
 
 $(kureYourBoilerplate ''MyGeneric ''Id ''())
 
-instance Term Exp where
-  type Generic Exp = MyGeneric  -- MyGeneric is its own Generic root.
-  inject    = id
-  select e  = return e
-
-{-
 instance Term Exp where
   type Generic Exp = MyGeneric
   inject           = ExpG
@@ -31,7 +24,7 @@ instance Term MyGeneric where
   type Generic MyGeneric = MyGeneric  -- MyGeneric is its own Generic root.
   inject    = id
   select e  = return e
--}
+
 type R e = Rewrite Id () e
 type T e1 e2 = Translate Id () e1 e2
 
@@ -54,6 +47,7 @@ main = do
 
 ------------------------------------------------------------------------
 
+
 function :: Translate Id () a b -> a -> b
 function f a = runId $ do 
         Right (b,_) <- runTranslate f () a
@@ -62,7 +56,7 @@ function f a = runId $ do
 ------------------------------------------------------------------------
 
 freeExpT :: T Exp [Name]
-freeExpT = lambda <+ var <+ crushU freeExpT
+freeExpT = lambda <+ var <+ crushU (promoteU freeExpT)
   where
           var    = varG >-> translate (\ (Var v) -> return [v])
           lambda = lamG >-> translate (\ (Lam n e) -> do
@@ -96,10 +90,10 @@ substExp v s = rule1 <+ rule2 <+ rule3 <+ rule4 <+ rule5 <+ rule6
         rule2 = varP $ \ n -> n /= v ? idR
         rule3 = lamP $ \ n e -> n == v ? idR
         rule4 = lamP $ \ n e -> (n `notElem` freeExp s || v `notElem` freeExp e) 
-                                ? allR (substExp v s)
+                                ? allR (promoteR $ substExp v s)
         rule5 = lamP $ \ n e -> (n `elem` freeExp s && v `elem` freeExp e)
                                 ? (shallowAlpha (freeExp s) >-> substExp v s)
-        rule6 = appG >-> allR (substExp v s)
+        rule6 = appG >-> allR (promoteR $ substExp v s)
 
               
 -------------
