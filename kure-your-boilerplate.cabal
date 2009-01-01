@@ -1,0 +1,35 @@
+Name:                kure-your-boilerplate
+Version:             0.1.1
+Synopsis:            Template Haskell Generator for KURE combinators
+Description:	     KURE is a DSL for building rewriting DSLs. 
+		     KURE-your-boilerplate is a set of functions for generating shallow tree walking combinators, for use with the KURE DSL.
+
+Category:            Language
+License:             BSD3
+License-file:        LICENSE
+Author:              Andy Gill
+Maintainer:          Andy Gill <andygill@ku.edu>
+Copyright:           (c) 2008 Andy Gill
+Homepage:            http://ittc.ku.edu/~andygill/kure.php
+Stability:	     alpha
+build-type: 	     Simple
+Cabal-Version:       >= 1.6
+
+Library
+  build-depends:       base, kure >= 0.2.2, template-haskell
+  Exposed-modules:
+       Language.KURE.Boilerplate
+
+  Ghc-Options:  -Wall
+
+
+Executable test1
+  Ghc-Options:     -fhpc
+  Main-Is:        Test.hs
+  Hs-Source-Dirs: ., test
+  other-modules: Id, Exp
+
+  buildable: True
+
+
+
