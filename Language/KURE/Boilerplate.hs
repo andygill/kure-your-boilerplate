@@ -9,21 +9,23 @@
 -- Portability: ghc
 --
 -- This module contains a Template Haskell based generator for the many data-type specific
--- functions that KURE want users to write. Kure Your Boilerplate (KYB) attempts to make
+-- functions that KURE want users to write. KURE Your Boilerplate (KYB) attempts to make
 -- writing these function easy. Eventually, there will be a small DSL for effects inside the 
 -- generated functions.
 --
 -- Unfortunately, you still need to write the 'Term' instance by hand, because of the use of
 -- type families, a feature that post-dates Template Haskell. You also need to write
--- the single MyGeneric datatype.
+-- the single MyGeneric datatype, which is considered documentation of what you want 
+-- KYB to do.
 --
---  'kureYourBoilerplate' generates a Walker instance for every data-type mentioned in your Generic,
--- and the following for every constructor in every data-structure that is mentioned in Generic, if the constructor
--- is called 'Foo', and have type @Foo :: A -> B -> C@.
+--  'kureYourBoilerplate' generates a 'Walker' instance for every data-type mentioned in your Generic,
+-- a 'Walker' instance for the Generic type itself, 
+-- and the following for every constructor in every data-structure that is mentioned in Generic. 
+-- For exmaple if a constructor is called 'Foo', and has type @Foo :: A -> B -> C@, we generate
 --
 --  * @fooR :: (...) => R A -> R B -> R C --@ congruence over @Foo@.
 --
---  * @fooU :: (...,Monoid m) => T A r -> T B r -> T C r --@ unify the interesting arguments of a @Foo@
+--  * @fooU :: (...,Monoid r) => T A r -> T B r -> T C r --@ unify the interesting arguments of a @Foo@.
 --
 --  * @fooG :: (...) => R C --@ guard for the constructor @Foo@.
 --
@@ -63,7 +65,7 @@ import System.Environment
 -- over a single data-type, i.e. you generic is your AST type.
 -- If you provide the name of a data-type  (the typical use-case), then this function generates
 -- code for every conceptual sub-type of the provided data-type.
-
+--
 -- The second argument is the monad over which you will be parameterizing your rewrite rules,
 -- and the third argument is the monoid over which you will be parameterizing.
 --
