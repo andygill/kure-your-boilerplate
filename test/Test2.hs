@@ -41,9 +41,9 @@ main = do
         sequence [ print (e,function (substExp v ed) e)  | v <- ["x","y","z"], ed <- es1, e <- es1 ]
 
         sequence  [ print (runId $ runTranslate betaRedR () e) | e <- es1 ]
-  --      let fn = extractR (topdownR (repeatR betaRedR))
-  --      sequence  [ print (runId $ runTranslate fn () e) | e <- es1 ]
-
+        let fn :: R Exp
+            fn = extractR (topdownR (promoteR $ repeatR betaRedR))
+        sequence  [ print (runId $ runTranslate fn () e) | e <- es1 ]
 
 ------------------------------------------------------------------------
 

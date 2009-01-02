@@ -29,7 +29,7 @@
 --
 --  * @fooP :: (...) => (A -> B -> T C a) -> T C a --@ pattern matching on @Foo@.
 --
---  * @withFoo :: (...,Failable) => (A -> B -> f a) -> C -> f a --@ application and pattern matching on @Foo@.
+--  * @withFoo :: (...,Failable f) => (A -> B -> f a) -> C -> f a --@ application and pattern matching on @Foo@.
 -- 
 -- Here, R is short for a 'Rewrite m dec', and 'T is short for 'Translate m dec'.
 --
@@ -80,14 +80,36 @@ kureYourBoilerplate gname m dec = do
                         fail $ "Strange type inside Generic datatype: " ++ show gname
                 return tys
             TyConI (TySynD _ [] singleTy) -> 
-                return [singleTy]
+                return [singleTy] -- no special generic instance needed
             _ -> fail $ "problem with generic type name " ++ show gname
   let tyNames = map pprint tys
-  decs <- sequence [ kureType debug (ConT m,ConT dec) tyNames ty | ty <- tys ]
-  when debug $ runIO $ do putStrLn $ pprint (concat decs)
-  return $ concat decs
+  (decs,allR',allU') <- liftM unzip3 $ sequence [ kureType debug (ConT m,ConT dec) tyNames ty | ty <- tys ]
 
-kureType :: Bool -> (Type,Type) -> [String] -> Type -> Q [Dec]
+  rr <- newName "rr"
+  theOptGenericInstance <- 
+         case info of
+           TyConI (DataD {}) -> do
+             let choice e1 e2 = InfixE (Just e1) (VarE '(<+)) (Just e2)
+             let altsR = [ AppE (VarE 'promoteR) (AppE (VarE nm) (VarE rr))
+                         | (FunD nm _) <- allR'
+                         ]
+             let altsU = [ AppE (VarE 'promoteU) (AppE (VarE nm) (VarE rr))
+                         | (FunD nm _) <- allU'
+                         ]
+             return [ InstanceD []
+                              (foldl AppT (ConT ''Walker) [ConT m,ConT dec,ConT gname]) 
+                              [ FunD (mkName "allR") [ Clause [VarP rr] (NormalB $ foldl1 choice altsR) allR']
+                              , FunD (mkName "crushU") [ Clause [VarP rr] (NormalB $ foldl1 choice altsU) allU']
+                              ]
+                    ]
+             
+           _ -> return []
+           
+  let alldecs = concat decs ++ theOptGenericInstance
+  when debug $ runIO $ do putStrLn $ pprint alldecs
+  return $ alldecs
+
+kureType :: Bool -> (Type,Type) -> [String] -> Type -> Q ([Dec],Dec,Dec)
 kureType debug (m,dec) tyNames ty@(ConT nm) = do
   info <- reify nm
   cons <- case info of
@@ -95,7 +117,7 @@ kureType debug (m,dec) tyNames ty@(ConT nm) = do
             _ -> fail $ "strange info on name " ++ show nm
   (decs,consNames,argCounts) <- liftM unzip3 $ sequence [ kureCons debug tyNames con | con <- cons ]
   rr <- newName "rr"
-  let buildFn name suffix extract = FunD (mkName $ name)
+  let buildFn name suffix extract = FunD name
              [ Clause [VarP rr] (NormalB $ foldl1 choice alts) []]
           where
              choice e1 e2 = InfixE (Just e1) (VarE '(<+)) (Just e2)
@@ -107,12 +129,18 @@ kureType debug (m,dec) tyNames ty@(ConT nm) = do
                     ]
   let theInstance = InstanceD []
                               (foldl AppT (ConT ''Walker) [m,dec,ty]) 
-                              [ buildFn "allR"   "R" 'extractR
-                              , buildFn "crushU" "U" 'extractU
+                              [ buildFn (mkName "allR")   "R" 'extractR
+                              , buildFn (mkName "crushU") "U" 'extractU
                               ]
                         
 
-  return $ concat decs ++ [theInstance] 
+  allR_nm <- newName "allR"
+  allU_nm <- newName "allU"
+  
+  return ( concat decs ++ [theInstance]
+         , buildFn allR_nm "R" 'extractR
+         , buildFn allU_nm "U" 'extractU
+         ) 
 kureType _debug _ _tyNames ty = fail $ "kureType: unsupported type :: " ++ show ty        
 
 kureCons :: Bool -> [String] -> Con -> Q ([Dec],String,Int)
