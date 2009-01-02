@@ -23,15 +23,13 @@ Library
   Ghc-Options:  -Wall
 
 
---Executable test1
---  Ghc-Options:     -fhpc
---  Main-Is:        Test.hs
---  Hs-Source-Dirs: ., test
---  other-modules: Id, Exp
---  buildable: True
+Executable test1
+  Main-Is:        Test.hs
+  Hs-Source-Dirs: ., test
+  other-modules: Id, Exp
+  buildable: True
 
 Executable test2
-  Ghc-Options:     -fhpc
   Main-Is:        Test2.hs
   Hs-Source-Dirs: ., test
   other-modules: Id, Exp
