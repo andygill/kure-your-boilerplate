@@ -1,5 +1,5 @@
 Name:                kure-your-boilerplate
-Version:             0.1.1
+Version:             0.1.2
 Synopsis:            Generator for Boilerplate KURE Combinators
 Description:	     KURE-your-boilerplate is a Template Haskell powered library for generating shallow tree walking combinators, 
                      for use with the KURE DSL.
@@ -34,6 +34,11 @@ Executable test2
   Hs-Source-Dirs: ., test
   other-modules: Id, Exp
   buildable: True
+
+Executable test3
+  Main-Is:        Test3.hs
+  Hs-Source-Dirs: ., test
+  other-modules: Id, Exp
 
 
 

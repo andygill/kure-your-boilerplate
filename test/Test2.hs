@@ -7,6 +7,7 @@ import Language.KURE.Boilerplate
 import Data.Monoid
 import Data.List
 import Debug.Trace
+import Control.Monad
 
 import Exp
 import Id
@@ -106,6 +107,11 @@ betaRedR = rewrite $ \ e ->
 debugR :: (Show e) => String -> R e      
 debugR msg = translate $ \ e -> transparently $ trace (msg ++ " : " ++ show e) (return e)
 
+listR :: R e -> R [e]
+listR rr = rewrite $ \ es -> transparently $ do mapM (apply rr) es
 
+tuple2R :: R e1 -> R e2 -> R (e1,e2)
+tuple2R rr1 rr2 = rewrite $ \ (e1,e2) -> transparently $ do liftM2 (,) (apply rr1 e1) (apply rr2 e2)
 
-
+--allR' :: (R (Generic e)) -> R [e]
+--allR' = extractR
